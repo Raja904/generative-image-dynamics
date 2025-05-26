@@ -3,10 +3,10 @@ import torch.nn as nn
 from typing import Union
 from .softsplat import softsplat
 
-def get_vgg16_feature_extractor(layers):
-    from torchvision.models import vgg16, VGG16_Weights
+def get_resnet34_feature_extractor(layers):
+    from torchvision.models import resnet34, ResNet34_Weights
     from torchvision.models.feature_extraction import create_feature_extractor
-    m = vgg16(weights=VGG16_Weights.IMAGENET1K_V1)
+    m = resnet34(weights=ResNet34_Weights.IMAGENET1K_V1)
     return_nodes = [f"features.{l}" for l in layers]
     return create_feature_extractor(m, return_nodes)
 
@@ -15,7 +15,7 @@ class VGGLoss(nn.Module):
     
     def __init__(self, layers=[3, 8, 15, 22]):
         super().__init__()
-        self.feature_extractor = get_vgg16_feature_extractor(layers).eval()
+        self.feature_extractor = get_resnet34_feature_extractor(layers).eval()
         for p in self.parameters():
             p.requires_grad = False
     
