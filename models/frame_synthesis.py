@@ -268,7 +268,7 @@ class Synthesis(torch.nn.Module):
     def forward(self, tenOne, tenForward):
         tenEncone = self.netEncode(tenOne)
         
-        tenMetricone = self.netSoftmetric(tenEncone, tenForward) * 2.0
+        tenMetricone = torch.norm(tenForward, p=2, dim=1, keepdim=True)  
 
         tenWarp = self.netWarp(tenEncone, tenMetricone, tenForward)
 
@@ -338,12 +338,25 @@ class Synthesis(torch.nn.Module):
 # end
 
 @torch.no_grad()
-def predict_tensor(src_frame: torch.Tensor, flow: torch.Tensor, model: Synthesis, transforms, batch_size: int = 32, return_tensor: bool = True):
-    # src_frame and flow should be normalized tensors
-    out_frames = []
-    for i in range(0, flow.shape[0], batch_size):
-        bs = min(batch_size, flow.shape[0] - i)
-        out_frames.append(model(src_frame.repeat(bs, 1, 1, 1), flow[i:i + bs]))
+def predict_sequence(src_frame: torch.Tensor, flow: torch.Tensor, model: Synthesis, transforms, return_tensor: bool = True):
+    """
+    Sequentially predict frames using the model by updating src_frame every step.
+    src_frame: initial frame tensor (1, C, H, W)
+    flow: (N, 2, H, W) optical flow between frames
+    """
+    out_frames = [src_frame]
+    
+    current_frame = src_frame
+    for i in range(flow.shape[0]):
+        current_flow = flow[i:i+1]  # batch size 1
+        
+        pred_frame = model(current_frame, current_flow)
+        
+        # Optionally denormalize or deprocess here, or after loop
+        current_frame = pred_frame
+        
+        out_frames.append(current_frame)
+    
     out_frames = torch.cat(out_frames, dim=0)
     
     if return_tensor:
